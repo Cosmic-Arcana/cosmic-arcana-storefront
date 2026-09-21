@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cosmic Arcana — Storefront
 
-## Getting Started
+The face of Cosmic Arcana: the web application users interact with, and the Backend-for-Frontend (BFF) that stands between them and the rest of the system.
 
-First, run the development server:
+## The idea
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Cosmic Arcana is an AI-native fortune-telling experience.
+
+A user asks a question — about a decision, a relationship, a career move, or simply what the coming week might bring — and an AI agent answers the way a digital fortune-teller would. It draws tarot cards, looks at what is happening in the sky, remembers previous readings, and weaves everything into a personal, entertaining prediction.
+
+The predictions are **fictional and reflective** by design. They are an invitation to think, not a claim about the future. Real-world data such as NASA imagery or astronomical events is used as storytelling material — symbolism, themes, atmosphere — and is never presented as evidence that the future can be predicted. The product always keeps a visible line between what was *retrieved from the real world* and what was *imagined*.
+
+The core loop:
+
+```text
+User question
+    ↓
+Prediction / tarot request
+    ↓
+AI agent
+    ↓
+Relevant tools and context
+    ↓
+Optional cosmic, historical or personal context
+    ↓
+AI interpretation
+    ↓
+Fictional prediction
+    ↓
+Saved reading
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## How it is being built
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Cosmic Arcana is also an experiment: how far can one software engineer push Claude Code as an engineering partner?
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The project is built almost entirely through **Claude Code Remote Control**. A Claude Code session runs on a development machine, and the engineer drives it from a smartphone. There is no fixed schedule and no desk required. Work happens from a phone, wherever the engineer happens to be — in small pockets of free time (a commute, a queue, a quiet evening) and whenever there are tokens left that are worth spending. The roadmap is shaped as much by spontaneous ideas as by a plan. A feature often starts as a thought typed on a phone and ends as a reviewed commit.
 
-## Learn More
+That way of working shapes the engineering:
 
-To learn more about Next.js, take a look at the following resources:
+- **Claude implements, the engineer steers.** Most of the code is delegated; architecture, service boundaries and review stay in human hands.
+- **Context lives in the repositories.** Any session must be able to pick up where the previous one stopped, so knowledge is kept in `CLAUDE.md` files, progress notes, conventions, skills and hooks — not in anyone's memory.
+- **Small slices.** Tasks are cut small enough to plan, implement, review and commit from a phone screen.
+- **Automated quality gates.** Tests, structured logging and consistent conventions catch what a small screen might miss.
+- **Multi-repository by design.** Every service lives in its own repository, which makes cross-repository context sharing part of the experiment.
+- **Deliberate context budgeting.** Short sessions reward tight prompts, focused tools and small outputs — the same discipline the product asks of its own AI agent.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## The system
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Cosmic Arcana is split into independent services, each in its own repository:
 
-## Deploy on Vercel
+| Service | Role |
+| --- | --- |
+| **cosmic-arcana-storefront** *(this repository)* | Web application and BFF — everything the user sees, and the only API the browser talks to |
+| **ai-service-api** | The fortune-teller's mind — predictions, tarot readings and all AI-specific business logic |
+| **nasa-service-api** | The window to the real sky — retrieves, normalizes and caches NASA and astronomical data |
+| **mcp-service-api** | The AI agent's doorway — exposes application capabilities as MCP tools, with agent authentication and on-behalf-of access |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Around them sit a few parts that do not have their own repositories yet: a **CQRS command layer** that orchestrates use cases, a **Redis / BullMQ broker** that carries domain events, a **PostgreSQL read model** that stores readings, and a **PostgreSQL MCP server** that gives the agent restricted, user-scoped database access.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+User
+  │
+  ▼
+Storefront (Next.js + BFF) ◄─────────────── queries ───────────────┐
+  │                                                                │
+  │ commands                                                       │
+  ▼                                                                │
+Command layer (NestJS CQRS)                                        │
+  │                                                                │
+  ├──► AI service ─────┐                                           │
+  └──► NASA service ───┤                                           │
+                       │ domain events                             │
+                       ▼                                           │
+             Broker (Redis / BullMQ) ──► Read model (PostgreSQL) ──┘
+
+
+AI agent (Claude) ── MCP ──► MCP service ──┬──► Command layer
+                                           └──► PostgreSQL MCP ──► cosmic_agent schema (RLS)
+```
+
+## What this service does
+
+### The web application
+
+Everything the user experiences:
+
+- asking a question and choosing the kind of reading;
+- watching the reading unfold — the cards drawn, the cosmic context gathered, the prediction revealed;
+- revisiting past readings and seeing how earlier predictions connect to new ones;
+- signing in and managing their own account.
+
+The storefront is responsible for making the line between fiction and fact obvious. A card's meaning and a NASA observation must never look like the same kind of information.
+
+### The BFF
+
+The Next.js API layer is the **only** API the frontend talks to. It exists exclusively for this frontend and is shaped around what the screens need, not around how the internal services are organized.
+
+- **Authentication** — identifies the user before anything reaches the internal services.
+- **Commands** — translates user actions ("ask a question", "draw cards") into commands for the command layer.
+- **Queries** — reads finished readings and history from the read model, already shaped for the UI.
+- **Correlation** — every user action starts its story here. The BFF assigns the correlation id that follows the request through every service, so a single reading can be traced end to end.
+- **Shielding** — internal services, their protocols and their failures are never exposed directly to the browser.
+
+### What it does not do
+
+The storefront does not generate predictions, call NASA, talk to the AI model or expose tools to the agent. Those responsibilities belong to the other services; the storefront asks for them and presents the results.
+
+## On the horizon
+
+Ideas that may shape the project next. In the spirit of spontaneous development, they are directions rather than commitments:
+
+- **Smartwatch integration** — quick questions and short readings from the wrist.
+- **Driver injection** — pluggable drivers injected into the system, some bringing AI features of their own, such as an MCP server.
