@@ -1,0 +1,60 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [development, main]
+  push:
+    branches: [development, main]
+  workflow_dispatch:
+
+concurrency:
+  group: lighthouse-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Audit with Lighthouse
+        id: lhci
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Write job summary
+        if: always() && steps.lhci.outputs.manifest
+        env:
+          MANIFEST: ${{ steps.lhci.outputs.manifest }}
+          LINKS: ${{ steps.lhci.outputs.links }}
+        run: |
+          [ -n "$LINKS" ] || LINKS='{}'
+          {
+            echo "## Lighthouse"
+            echo
+            echo "| URL | Performance | Accessibility | Best practices | SEO | Report |"
+            echo "| --- | --- | --- | --- | --- | --- |"
+            jq -r --argjson links "$LINKS" '
+              .[] | select(.isRepresentativeRun)
+              | "| \(.url) | \(.summary.performance * 100 | round) | \(.summary.accessibility * 100 | round) | \(.summary["best-practices"] * 100 | round) | \(.summary.seo * 100 | round) | \($links[.url] // "—") |"
+            ' <<< "$MANIFEST"
+          } >> "$GITHUB_STEP_SUMMARY"
