@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Worktrees carry a full copy of the app, build output included; linting it twice is noise.
+    ".claude/**",
+    "**/.next/**",
   ]),
 ]);
 

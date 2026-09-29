@@ -41,3 +41,9 @@ yarn-error.log*
 # lighthouse local reports
 lighthouse-*.json
 lighthouse-report.json
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# TypeScript incremental build info
+*.tsbuildinfo
