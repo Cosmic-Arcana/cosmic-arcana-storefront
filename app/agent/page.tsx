@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Agent activity',
   description: 'What the AI agent does on your behalf through MCP.',
+  robots: { index: false, follow: false },
 };
 
 export default async function AgentActivityPage() {

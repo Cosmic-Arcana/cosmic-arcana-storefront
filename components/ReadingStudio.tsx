@@ -5,6 +5,7 @@ import { useState } from "react";
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
 import type { SceneCard } from "./ArcanaScene";
+import { illustrateCards } from "../lib/cosmic-context";
 import { GRAPHICS_MODES } from "../lib/graphics-capability";
 import { liveWsUrl, useLiveSpreads } from "../lib/use-live-spreads";
 import { useGraphicsMode } from "../lib/use-graphics-mode";
@@ -25,10 +26,12 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
   const [error, setError] = useState<string | null>(null);
   const [spread, setSpread] = useState<SpreadDetailsV1 | null>(null);
   const [joinLive, setJoinLive] = useState(false);
+  const [consent, setConsent] = useState(false);
   const { live, connected } = useLiveSpreads(joinLive);
   const { mode, setMode, capability } = useGraphicsMode();
 
   const cards: SceneCard[] = spread?.cards ?? [];
+  const cosmic = illustrateCards(cards);
   const liveCards: SceneCard[] = live.flatMap((item) => item.cards);
 
   const onAsk = async () => {
@@ -38,7 +41,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
       const response = await fetch("/api/spreads", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, consent: true }),
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
@@ -121,7 +124,16 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
           <h1 className="text-2xl font-semibold text-[#f5f3ff]">Fictional reading</h1>
           <p className="text-sm leading-6 text-[#e4e4e7]">
             Readings are fiction and entertainment. They are not advice and not a factual claim
-            about the future.
+            about the future. Interpretations, when present, are <strong>AI-generated</strong>.
+          </p>
+          <p className="text-sm leading-6 text-[#e4e4e7]">
+            <a className="underline" href="/privacy">
+              Privacy
+            </a>{" "}
+            ·{" "}
+            <a className="underline" href="/terms">
+              Terms
+            </a>
           </p>
           <label htmlFor="question" className="text-sm font-medium text-amber-100">
             Your question
@@ -139,12 +151,22 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
             disabled={busy}
           />
           <p id="question-help" className="text-xs text-[#d4d4d8]">
-            Sent to tarot-service-api. The question is not written to application logs.
+            Sent to tarot-service-api. The question is not written to application logs. Special
+            category topics (health, sex, religion) need this explicit consent.
           </p>
+          <label className="flex items-start gap-2 text-sm text-[#e4e4e7]">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+              className="mt-1"
+            />
+            I consent to storing this question to produce a fictional reading.
+          </label>
           <button
             type="button"
             onClick={() => void onAsk()}
-            disabled={busy || question.trim().length === 0}
+            disabled={busy || question.trim().length === 0 || !consent}
             data-testid="ask-button"
             aria-busy={busy}
             className="rounded-xl bg-amber-200 px-4 py-3 text-sm font-semibold text-[#0b0714] disabled:opacity-40"
@@ -158,9 +180,22 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
           ) : null}
           {spread ? (
             <div className="space-y-2 text-sm text-[#e4e4e7]" data-spread-id={spread.spreadId}>
-              <p className="text-xs uppercase tracking-wide text-[#d4d4d8]">Stub from tarot-service-api</p>
+              <p className="text-xs uppercase tracking-wide text-[#d4d4d8]">
+                Stub from tarot-service-api · AI-generated if interpretation is wired later
+              </p>
               <p className="font-mono text-[11px] text-[#d4d4d8]">{spread.spreadId}</p>
+              <a className="text-sm text-amber-100 underline" href={`/readings/${spread.spreadId}`}>
+                Open saved reading
+              </a>
               <p>{spread.prediction}</p>
+              <div data-testid="cosmic-context" className="space-y-1 text-xs text-[#d4d4d8]">
+                <p>Symbolic sky (fixture, not a live NASA call). It did not choose these cards.</p>
+                {cosmic.map((row) => (
+                  <p key={`${row.positionKey}-${row.cardId}`}>
+                    {row.positionKey}: {row.motif}
+                  </p>
+                ))}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-[#d4d4d8]">
