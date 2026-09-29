@@ -26,3 +26,5 @@ jobs:
       # No image yet: the storefront joins application validation once it has routes to validate.
       build-image: false
       dispatch: false
+    secrets:
+      INFRA_DISPATCH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
