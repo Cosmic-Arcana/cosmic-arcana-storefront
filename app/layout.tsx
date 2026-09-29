@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteHeader } from "../components/SiteHeader";
+import { DependencyStatusNotice } from "../components/DependencyStatusNotice";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to reading
         </a>
         <SiteHeader />
+        <DependencyStatusNotice />
         {children}
       </body>
     </html>

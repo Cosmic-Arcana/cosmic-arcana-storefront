@@ -1,14 +1,23 @@
 import Link from "next/link";
 
-const links = [
-  { href: "/", label: "Reading" },
-  { href: "/#under-the-hood", label: "Under the hood" },
-  { href: "/watch", label: "Watch preview" },
-  { href: "/agent", label: "Agent activity" },
-  { href: "/login", label: "Sign in" },
-] as const;
+import { auth0 } from "../lib/auth0";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const session = await auth0.getSession().catch(() => null);
+  const signedIn = Boolean(session?.user?.sub);
+
+  const links = [
+    { href: "/", label: "Reading" },
+    { href: "/readings", label: "Saved" },
+    { href: "/#under-the-hood", label: "Under the hood" },
+    { href: "/watch", label: "Watch preview" },
+    { href: "/agent", label: "Agent activity" },
+    { href: "/privacy", label: "Privacy" },
+    signedIn
+      ? { href: "/auth/logout", label: "Sign out" }
+      : { href: "/login", label: "Sign in" },
+  ] as const;
+
   return (
     <header
       data-testid="site-header"
