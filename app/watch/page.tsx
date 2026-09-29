@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ReadingStudio } from "../../components/ReadingStudio";
 
 export const metadata = {
@@ -22,9 +24,9 @@ export default function WatchPage() {
           <ReadingStudio compact />
         </div>
       </div>
-      <a href="/" className="text-sm font-medium text-amber-100 underline underline-offset-4">
+      <Link href="/" className="text-sm font-medium text-amber-100 underline underline-offset-4">
         Back to reading
-      </a>
+      </Link>
     </main>
   );
 }
