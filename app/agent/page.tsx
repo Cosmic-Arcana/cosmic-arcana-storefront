@@ -21,7 +21,7 @@ export default async function AgentActivityPage() {
           Sign in to watch what an agent does on your behalf.
         </p>
         <a
-          href="/auth/login"
+          href="/login"
           className="mt-6 inline-block rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
         >
           Sign in
