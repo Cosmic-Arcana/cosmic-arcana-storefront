@@ -18,7 +18,7 @@ jobs:
     uses: Cosmic-Arcana/cosmic-arcana-infrastructure/.github/workflows/service-ci.yml@main
     permissions:
       contents: read
-      packages: read
+      packages: write
     with:
       service-name: cosmic-arcana-storefront
       tier: liveness
