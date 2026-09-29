@@ -1,11 +1,14 @@
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
-import { DEMO_USER_ID, newIdempotencyKey } from "./demo-identity";
+import { newIdempotencyKey } from "./spread-user";
 
 export const tarotBaseUrl = (): string =>
   (process.env.TAROT_BASE_URL ?? "").replace(/\/$/, "");
 
-export const createSpread = async (question: string): Promise<SpreadDetailsV1> => {
+export const createSpread = async (
+  question: string,
+  userId: string,
+): Promise<SpreadDetailsV1> => {
   const base = tarotBaseUrl();
   if (!base) {
     throw new Error("TAROT_BASE_URL is not set");
@@ -16,13 +19,19 @@ export const createSpread = async (question: string): Promise<SpreadDetailsV1> =
     throw new Error("question is empty");
   }
 
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "idempotency-key": newIdempotencyKey(),
+  };
+  const internal = process.env.INTERNAL_SERVICE_TOKEN;
+  if (internal) {
+    headers["x-internal-token"] = internal;
+  }
+
   const response = await fetch(`${base}/spreads`, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "idempotency-key": newIdempotencyKey(),
-    },
-    body: JSON.stringify({ userId: DEMO_USER_ID, question: trimmed }),
+    headers,
+    body: JSON.stringify({ userId, question: trimmed }),
   });
 
   const body: unknown = await response.json().catch(() => null);
