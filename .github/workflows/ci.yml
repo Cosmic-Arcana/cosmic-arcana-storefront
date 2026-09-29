@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [development, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storefront-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: Cosmic-Arcana/cosmic-arcana-infrastructure/.github/workflows/service-ci.yml@main
+    permissions:
+      contents: read
+      packages: read
+    with:
+      service-name: cosmic-arcana-storefront
+      tier: liveness
+      test-command: ''
+      # No image yet: the storefront joins application validation once it has routes to validate.
+      build-image: false
+      dispatch: false
