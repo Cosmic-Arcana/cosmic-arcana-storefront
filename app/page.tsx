@@ -1,5 +1,5 @@
-import { ReadingStudio } from "../components/ReadingStudio";
+import { HomeExperience } from "../components/HomeExperience";
 
 export default function HomePage() {
-  return <ReadingStudio />;
+  return <HomeExperience />;
 }

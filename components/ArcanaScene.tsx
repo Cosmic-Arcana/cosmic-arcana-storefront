@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MathUtils, type Group } from "three";
 
 export type SceneCard = {
@@ -95,9 +95,60 @@ function EmptyDeck() {
   );
 }
 
+function webglAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
+function CssDeck({ cards, liveCards }: { cards: SceneCard[]; liveCards: SceneCard[] }) {
+  const shown = cards.length === 0 ? [{ positionKey: "empty", cardId: "deck", reversed: false }] : cards.slice(0, 3);
+  return (
+    <div
+      data-scene="css"
+      className="flex h-full items-center justify-center gap-3 bg-[#16082a]"
+    >
+      {shown.map((card) => (
+        <div
+          key={`${card.positionKey}-${card.cardId}`}
+          data-card-id={card.cardId}
+          className="flex h-40 w-24 items-center justify-center rounded-lg border border-amber-200 bg-[#4c1d95] text-center text-xs text-amber-100"
+        >
+          {card.cardId}
+        </div>
+      ))}
+      {liveCards.slice(-3).map((card, index) => (
+        <div
+          key={`live-${card.cardId}-${index}`}
+          data-live-card={card.cardId}
+          className="flex h-28 w-16 items-center justify-center rounded-lg border border-cyan-200 bg-[#164e63] text-center text-[10px] text-cyan-100"
+        >
+          {card.cardId}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ArcanaScene({ cards, liveCards = [], compact = false }: ArcanaSceneProps) {
   const shown = useMemo(() => cards.slice(0, 3), [cards]);
   const live = useMemo(() => liveCards.slice(-8), [liveCards]);
+  const [gl, setGl] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setGl(webglAvailable());
+  }, []);
+
+  if (gl === false) {
+    return <CssDeck cards={shown} liveCards={live} />;
+  }
+
+  if (gl === null) {
+    return <div className="h-full w-full bg-[#16082a]" data-scene="pending" />;
+  }
 
   return (
     <Canvas
@@ -105,6 +156,11 @@ export function ArcanaScene({ cards, liveCards = [], compact = false }: ArcanaSc
       camera={{ position: [0, 0.2, compact ? 4.4 : 5], fov: compact ? 48 : 40 }}
       gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
       style={{ width: "100%", height: "100%", background: "#16082a" }}
+      onCreated={({ gl: renderer }) => {
+        renderer.getContext().canvas.addEventListener("webglcontextlost", (event) => {
+          event.preventDefault();
+        });
+      }}
     >
       <color attach="background" args={["#16082a"]} />
       <ambientLight intensity={1} />

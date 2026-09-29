@@ -21,3 +21,18 @@ body {
 canvas {
   display: block;
 }
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -3rem;
+  z-index: 50;
+  border-radius: 0.375rem;
+  background: #fde68a;
+  padding: 0.5rem 0.75rem;
+  color: #0b0714;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}

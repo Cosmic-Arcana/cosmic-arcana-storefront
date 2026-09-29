@@ -152,6 +152,8 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
               {events.map((event) => (
                 <li
                   key={event.eventId}
+                  data-agent-event={event.eventId}
+                  data-event-kind={event.kind}
                   className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">

@@ -50,13 +50,13 @@ const parseLive = (value: unknown): LiveSpreadDrawn | null => {
 export const liveWsUrl = (): string =>
   (process.env.NEXT_PUBLIC_TAROT_WS_URL ?? "").replace(/\/$/, "");
 
-export function useLiveSpreads(): { live: LiveSpreadDrawn[]; connected: boolean } {
+export function useLiveSpreads(enabled: boolean): { live: LiveSpreadDrawn[]; connected: boolean } {
   const [live, setLive] = useState<LiveSpreadDrawn[]>([]);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     const url = liveWsUrl();
-    if (!url) {
+    if (!enabled || !url) {
       return;
     }
     const socket = new WebSocket(url);
@@ -75,7 +75,7 @@ export function useLiveSpreads(): { live: LiveSpreadDrawn[]; connected: boolean 
       }
     };
     return () => socket.close();
-  }, []);
+  }, [enabled]);
 
   return { live, connected };
 }

@@ -1,12 +1,13 @@
 export const metadata = {
-  title: 'Sign in · Cosmic Arcana',
+  title: "Sign in",
+  description: "Sign in to Cosmic Arcana with GitHub or Google through Auth0.",
 };
 
 export default function LoginPage() {
   return (
-    <main className="mx-auto max-w-md p-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-3 text-sm text-zinc-400">
+    <main id="main" className="mx-auto max-w-md p-10">
+      <h1 className="text-2xl font-semibold tracking-tight text-[#f5f3ff]">Sign in</h1>
+      <p className="mt-3 text-sm leading-6 text-[#e4e4e7]">
         GitHub and Google go through Auth0. Enable those social connections on the tenant, then
         create the GitHub OAuth app and Google Cloud OAuth client Auth0 asks for (redirect URI is
         the Auth0 callback, not this site).

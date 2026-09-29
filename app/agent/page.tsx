@@ -6,7 +6,7 @@ import { AgentActivityDashboard } from './AgentActivityDashboard';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Agent activity · Cosmic Arcana',
+  title: 'Agent activity',
   description: 'What the AI agent does on your behalf through MCP.',
 };
 
@@ -15,9 +15,9 @@ export default async function AgentActivityPage() {
 
   if (!userId) {
     return (
-      <main className="mx-auto max-w-xl p-10">
+      <main id="main" className="mx-auto max-w-xl p-10">
         <h1 className="text-2xl font-semibold tracking-tight">Agent activity</h1>
-        <p className="mt-3 text-sm text-zinc-400">
+        <p className="mt-3 text-sm text-[#e4e4e7]">
           Sign in to watch what an agent does on your behalf.
         </p>
         <a
@@ -40,7 +40,7 @@ export default async function AgentActivityPage() {
   }
 
   return (
-    <main>
+    <main id="main">
       {unreachable && (
         <p className="mx-auto max-w-6xl px-6 pt-6 text-sm text-amber-300">
           mcp-service-api is not reachable ({unreachable}). The feed will fill in once it answers.
