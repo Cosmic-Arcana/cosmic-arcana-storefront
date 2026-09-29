@@ -5,7 +5,9 @@ import { useState } from "react";
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
 import type { SceneCard } from "./ArcanaScene";
+import { GRAPHICS_MODES } from "../lib/graphics-capability";
 import { liveWsUrl, useLiveSpreads } from "../lib/use-live-spreads";
+import { useGraphicsMode } from "../lib/use-graphics-mode";
 
 const ArcanaScene = dynamic(
   () => import("./ArcanaScene").then((mod) => mod.ArcanaScene),
@@ -24,6 +26,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
   const [spread, setSpread] = useState<SpreadDetailsV1 | null>(null);
   const [joinLive, setJoinLive] = useState(false);
   const { live, connected } = useLiveSpreads(joinLive);
+  const { mode, setMode, capability } = useGraphicsMode();
 
   const cards: SceneCard[] = spread?.cards ?? [];
   const liveCards: SceneCard[] = live.flatMap((item) => item.cards);
@@ -68,8 +71,20 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
         aria-label="Three-dimensional tarot deck. Move the pointer to tilt the cards."
         data-testid="tarot-scene"
       >
-        <div className="absolute inset-0" role="img" aria-label="Animated tarot cards in 3D">
-          <ArcanaScene cards={cards} liveCards={liveCards} compact={compact} />
+        <div
+          className="absolute inset-0"
+          role="img"
+          aria-label="Animated tarot cards"
+          data-graphics-mode={mode}
+          data-graphics={capability?.allow3d ? "3d" : "disabled"}
+        >
+          <ArcanaScene
+            cards={cards}
+            liveCards={liveCards}
+            compact={compact}
+            mode={mode}
+            capability={capability}
+          />
         </div>
         {liveCards.length > 0 ? (
           <div className="pointer-events-none absolute inset-x-0 top-4 flex flex-wrap justify-center gap-2 px-3">
@@ -153,6 +168,38 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
               decoration, not a reading.
             </p>
           )}
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-amber-100">Graphics</legend>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Graphics mode">
+              {GRAPHICS_MODES.map((option) => {
+                const blocked = Boolean(
+                  capability &&
+                    GRAPHICS_MODES.indexOf(option) > GRAPHICS_MODES.indexOf(capability.maxMode),
+                );
+                return (
+                  <label
+                    key={option}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-violet-400 px-3 py-2 text-sm text-[#f5f3ff]"
+                  >
+                    <input
+                      type="radio"
+                      name="graphics-mode"
+                      value={option}
+                      checked={mode === option}
+                      disabled={blocked}
+                      onChange={() => setMode(option)}
+                    />
+                    {option}
+                  </label>
+                );
+              })}
+            </div>
+            {capability ? (
+              <p className="text-xs text-[#d4d4d8]" data-graphics-reason="">
+                {capability.reason}
+              </p>
+            ) : null}
+          </fieldset>
           <p className="text-xs text-[#d4d4d8]" data-live={connected ? "on" : "off"}>
             {connected
               ? "Live feed on. Other real draws show as cyan cards."
