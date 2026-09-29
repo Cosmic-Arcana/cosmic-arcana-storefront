@@ -2,6 +2,8 @@
 
 The face of Cosmic Arcana: the web application users interact with, and the Backend-for-Frontend (BFF) that stands between them and the rest of the system.
 
+Gaps vs a finished product (auth not wired to readings, GDPR pages): `docs/completeness-audit.md` in the workspace.
+
 ## The idea
 
 Cosmic Arcana is an AI-native fortune-telling experience.
@@ -34,7 +36,7 @@ Saved reading
 
 Cosmic Arcana is also an experiment: how far can one software engineer push Claude Code as an engineering partner?
 
-The project is built almost entirely through **Claude Code Remote Control**. A Claude Code session runs on a development machine, and the engineer drives it from a smartphone. There is no fixed schedule and no desk required. Work happens from a phone, wherever the engineer happens to be — in small pockets of free time (a commute, a queue, a quiet evening) and whenever there are tokens left that are worth spending. The roadmap is shaped as much by spontaneous ideas as by a plan. A feature often starts as a thought typed on a phone and ends as a reviewed commit.
+The project is **vibe-coded**. It is built through **Claude Code Remote Control** (a session on a development machine, driven from a smartphone) **and through Cursor**. After the hackathon, about **$190 of Cursor usage credits** remain. There is no fixed schedule and no desk required. Work happens wherever the engineer happens to be — in small pockets of free time (a commute, a queue, a quiet evening) and whenever there are tokens left that are worth spending. The roadmap is shaped as much by spontaneous ideas as by a plan. A feature often starts as a thought typed on a phone and ends as a reviewed commit.
 
 That way of working shapes the engineering:
 
