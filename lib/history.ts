@@ -113,3 +113,23 @@ export const resolveReadingDetail = async ({
     return { kind: "error", message: cause instanceof Error ? cause.message : "history failed" };
   }
 };
+
+const SPREAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The id travels into an upstream url path, so it is checked before it is ever interpolated. */
+export const isSpreadId = (value: string): boolean => SPREAD_ID.test(value);
+
+export type DeleteOutcome = {
+  status: number;
+  body: { deleted: true } | { error: string };
+};
+
+export const deleteOutcome = (upstreamStatus: number): DeleteOutcome => {
+  if (upstreamStatus === 404) {
+    return { status: 404, body: { error: "not found" } };
+  }
+  if (upstreamStatus >= 200 && upstreamStatus < 300) {
+    return { status: 200, body: { deleted: true } };
+  }
+  return { status: 502, body: { error: `history ${upstreamStatus}` } };
+};

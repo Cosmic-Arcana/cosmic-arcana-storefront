@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  deleteOutcome,
+  isSpreadId,
   itemBySpreadId,
   parseHistoryPage,
   readingsView,
@@ -122,5 +124,33 @@ describe("resolveReadingDetail", () => {
     });
     assert.equal(failed.kind, "error");
     assert.equal(failed.kind === "error" ? failed.message : "", "history 502");
+  });
+});
+
+describe("isSpreadId", () => {
+  it("accepts a uuid", () => {
+    assert.equal(isSpreadId("11111111-1111-4111-8111-111111111111"), true);
+  });
+
+  it("rejects anything that could travel up a url path", () => {
+    for (const value of ["", "../../secrets", "11111111", "not a uuid", "1/2"]) {
+      assert.equal(isSpreadId(value), false);
+    }
+  });
+});
+
+describe("deleteOutcome", () => {
+  it("passes a deletion through", () => {
+    assert.deepEqual(deleteOutcome(200), { status: 200, body: { deleted: true } });
+    assert.deepEqual(deleteOutcome(204), { status: 200, body: { deleted: true } });
+  });
+
+  it("keeps a missing reading a 404, not a gateway error", () => {
+    assert.deepEqual(deleteOutcome(404), { status: 404, body: { error: "not found" } });
+  });
+
+  it("reports anything else as an upstream failure", () => {
+    assert.deepEqual(deleteOutcome(500), { status: 502, body: { error: "history 500" } });
+    assert.deepEqual(deleteOutcome(403), { status: 502, body: { error: "history 403" } });
   });
 });
