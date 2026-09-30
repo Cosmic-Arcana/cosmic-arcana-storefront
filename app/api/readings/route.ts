@@ -8,7 +8,7 @@ export async function GET() {
   if (!historyBaseUrl()) {
     return NextResponse.json({ error: "history unconfigured" }, { status: 503 });
   }
-  const session = await auth0.getSession();
+  const session = await auth0.getSession().catch(() => null);
   const userId = resolveSpreadUserId(session?.user?.sub);
   if (!userId) {
     return NextResponse.json({ error: "sign in required" }, { status: 401 });
