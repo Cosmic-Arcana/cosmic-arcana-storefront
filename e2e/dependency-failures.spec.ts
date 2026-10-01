@@ -192,8 +192,8 @@ test.describe("Feature: saved readings while history is unavailable", () => {
     await page.getByRole("button", { name: "Remove from history" }).click();
     await page.getByRole("button", { name: "Yes, remove" }).click();
 
-    await expect(page.getByRole("alert")).toContainText(FRIENDLY);
-    await expect(page.getByRole("alert")).not.toContainText(TECHNICAL);
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(FRIENDLY);
+    await expect(page.getByRole("main").getByRole("alert")).not.toContainText(TECHNICAL);
     await expect(page).toHaveURL(new RegExp(`/readings/${reading.spreadId}$`));
   });
 

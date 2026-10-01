@@ -199,7 +199,7 @@ test.describe("Feature: removing a saved reading", () => {
     await page.getByRole("button", { name: "Remove from history" }).click();
     await page.getByRole("button", { name: "Yes, remove" }).click();
 
-    await expect(page.getByRole("alert")).toContainText(/already|no longer|not found|gone/i);
-    await expect(page.getByRole("alert")).not.toContainText(/delete 404|\b404\b/);
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(/already|no longer|not found|gone/i);
+    await expect(page.getByRole("main").getByRole("alert")).not.toContainText(/delete 404|\b404\b/);
   });
 });
