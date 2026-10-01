@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
-import { beginRequest, describeFailure, CORRELATION_HEADER } from "./bff.ts";
+import { beginRequest, describeFailure, recordPageFailure, CORRELATION_HEADER } from "./bff.ts";
 import { setLogSink } from "./log.ts";
 import { USER_MESSAGES } from "./user-messages.ts";
 import { UpstreamError } from "./upstream.ts";
@@ -99,5 +99,26 @@ describe("describeFailure", () => {
     assert.equal(failure.status, 500);
     assert.equal(failure.message, USER_MESSAGES.somethingWrong);
     assert.equal(failure.fields.errorName, "TypeError");
+  });
+});
+
+describe("recordPageFailure", () => {
+  it("writes one warning for a dependency outage and returns the sentence for the page", () => {
+    const message = recordPageFailure("corr-12345678", "/readings", new UpstreamError("history", "timeout"));
+
+    assert.equal(message, USER_MESSAGES.savedUnavailable);
+    assert.equal(lines.length, 1);
+    assert.equal(lines[0].level, "warn");
+    assert.equal(lines[0].correlationId, "corr-12345678");
+    assert.equal(lines[0].route, "/readings");
+    assert.equal(lines[0].failure, "timeout");
+    assert.equal(lines[0].statusCode, 504);
+  });
+
+  it("writes an error for something unexpected", () => {
+    recordPageFailure("corr-12345678", "/readings", new RangeError("boom"));
+
+    assert.equal(lines[0].level, "error");
+    assert.equal(lines[0].errorName, "RangeError");
   });
 });

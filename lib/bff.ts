@@ -57,3 +57,17 @@ export const describeFailure = (error: unknown): Failure => {
     fields: { outcome: "error", errorName: error instanceof Error ? error.name : "Unknown" },
   };
 };
+
+/**
+ * A server-rendered page has no response to log, so a failure behind it is recorded here, once,
+ * and the visitor's sentence comes back for the page to show.
+ */
+export const recordPageFailure = (correlationId: string, route: string, error: unknown): string => {
+  const failure = describeFailure(error);
+  writeLog(failure.status === 500 ? "error" : "warn", "Page", "page data unavailable", correlationId, {
+    route,
+    statusCode: failure.status,
+    ...failure.fields,
+  });
+  return failure.message;
+};
