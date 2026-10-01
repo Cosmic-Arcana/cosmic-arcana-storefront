@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --experimental-strip-types \"lib/**/*.test.ts\""
+    "test": "node --test --experimental-strip-types \"lib/**/*.test.ts\"",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.27.0",
