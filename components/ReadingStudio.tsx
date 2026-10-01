@@ -188,7 +188,9 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
               <a className="text-sm text-amber-100 underline" href={`/readings/${spread.spreadId}`}>
                 Open saved reading
               </a>
-              <p>{spread.prediction}</p>
+              <p data-testid="prediction" className="whitespace-pre-line">
+                {spread.prediction}
+              </p>
               <div data-testid="cosmic-context" className="space-y-1 text-xs text-[#d4d4d8]">
                 <p>Symbolic sky (fixture, not a live NASA call). It did not choose these cards.</p>
                 {cosmic.map((row) => (
