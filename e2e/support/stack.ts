@@ -39,6 +39,14 @@ export const injectFault = async (proxy: string, fault: Fault): Promise<void> =>
   }
 };
 
+export type ForwardedRequest = { method: string; url: string; headers: Record<string, string> };
+
+/** The last request the app sent to a dependency through its proxy. */
+export const lastForwarded = async (proxy: string): Promise<ForwardedRequest> => {
+  const response = await fetch(`${proxy}/__last`);
+  return (await response.json()) as ForwardedRequest;
+};
+
 export const clearFaults = async (): Promise<void> => {
   await Promise.all([
     injectFault(TAROT_PROXY, { kind: "pass" }),
