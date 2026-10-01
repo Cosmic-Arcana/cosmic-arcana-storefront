@@ -71,7 +71,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
       data-compact={compact ? "true" : "false"}
     >
       <section
-        className={compact ? "relative h-full min-h-0 flex-1" : "relative h-[70vh] min-h-[420px]"}
+        className={compact ? "relative h-full min-h-0 flex-1" : "relative h-[34svh] min-h-[220px] lg:h-[70vh] lg:min-h-[420px]"}
         aria-label="Three-dimensional tarot deck. Move the pointer to tilt the cards."
         data-testid="tarot-scene"
       >
@@ -120,7 +120,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
         </div>
       </section>
       {compact ? null : (
-        <aside className="flex flex-col gap-4 border-t border-violet-500/20 bg-[#0b0714] p-6 lg:border-l lg:border-t-0">
+        <aside className="order-first flex flex-col gap-4 border-b border-violet-500/20 bg-[#0b0714] p-6 lg:order-none lg:border-b-0 lg:border-l">
           <p className="text-xs uppercase tracking-[0.2em] text-violet-200">Cosmic Arcana</p>
           <h1 className="text-2xl font-semibold text-[#f5f3ff]">Fictional reading</h1>
           <p className="text-sm leading-6 text-[#e4e4e7]">
@@ -145,10 +145,10 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             maxLength={1000}
-            rows={5}
+            rows={3}
             placeholder="Ask a question"
             aria-describedby="question-help"
-            className="resize-none rounded-xl border border-violet-400 bg-[#160f24] p-3 text-sm text-[#f5f3ff] outline-none focus:border-amber-200"
+            className="resize-none rounded-xl border border-violet-400 bg-[#160f24] p-3 text-sm text-[#f5f3ff] outline-none focus:border-amber-200 lg:h-32"
             disabled={busy}
           />
           <p id="question-help" className="text-xs text-[#d4d4d8]">
