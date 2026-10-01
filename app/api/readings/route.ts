@@ -1,22 +1,25 @@
-import { NextResponse } from "next/server";
-
 import { auth0 } from "../../../lib/auth0";
+import { beginRequest, describeFailure } from "../../../lib/bff";
 import { fetchHistoryPage, historyBaseUrl } from "../../../lib/history";
 import { resolveSpreadUserId } from "../../../lib/spread-user";
+import { USER_MESSAGES } from "../../../lib/user-messages";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { correlationId, respond } = beginRequest(request, "/api/readings");
   if (!historyBaseUrl()) {
-    return NextResponse.json({ error: "history unconfigured" }, { status: 503 });
+    return respond(503, { error: USER_MESSAGES.savedUnavailable }, "unconfigured");
   }
   const session = await auth0.getSession().catch(() => null);
   const userId = resolveSpreadUserId(session?.user?.sub);
   if (!userId) {
-    return NextResponse.json({ error: "sign in required" }, { status: 401 });
+    return respond(401, { error: USER_MESSAGES.signInRequired }, "signed-out");
   }
+
+  const cursor = new URL(request.url).searchParams.get("cursor");
   try {
-    return NextResponse.json(await fetchHistoryPage(userId));
+    return respond(200, await fetchHistoryPage(userId, { cursor, correlationId }), "listed");
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : "history failed";
-    return NextResponse.json({ error: message }, { status: 502 });
+    const failure = describeFailure(cause);
+    return respond(failure.status, { error: failure.message }, "error", failure.fields);
   }
 }
