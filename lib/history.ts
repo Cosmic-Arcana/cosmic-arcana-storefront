@@ -1,7 +1,33 @@
-import type { SpreadHistoryItemV1, SpreadHistoryPageV1 } from "@cosmic-arcana/sdk";
+import type {
+  SpreadCardV1,
+  SpreadDetailsV1,
+  SpreadHistoryItemV1,
+  SpreadHistoryPageV1,
+} from "@cosmic-arcana/sdk";
+
+import { CORRELATION_HEADER } from "./bff.ts";
+import { UpstreamError, readUpstreamJson, upstreamFetch } from "./upstream.ts";
+import { USER_MESSAGES } from "./user-messages.ts";
 
 export const historyBaseUrl = (): string =>
   (process.env.HISTORY_BASE_URL ?? "").replace(/\/$/, "");
+
+const parseItem = (value: unknown): SpreadHistoryItemV1 => {
+  if (!value || typeof value !== "object") {
+    throw new Error("history item invalid");
+  }
+  const row = value as Record<string, unknown>;
+  if (typeof row.spreadId !== "string" || typeof row.prediction !== "string") {
+    throw new Error("history item fields missing");
+  }
+  return {
+    spreadId: row.spreadId,
+    question: typeof row.question === "string" ? row.question : "",
+    cards: Array.isArray(row.cards) ? (row.cards as SpreadCardV1[]) : [],
+    prediction: row.prediction,
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
+  };
+};
 
 export const parseHistoryPage = (body: unknown): SpreadHistoryPageV1 => {
   if (!body || typeof body !== "object") {
@@ -11,24 +37,8 @@ export const parseHistoryPage = (body: unknown): SpreadHistoryPageV1 => {
   if (!Array.isArray(record.items)) {
     throw new Error("history items missing");
   }
-  const items = record.items.map((item) => {
-    if (!item || typeof item !== "object") {
-      throw new Error("history item invalid");
-    }
-    const row = item as Record<string, unknown>;
-    if (typeof row.spreadId !== "string" || typeof row.prediction !== "string") {
-      throw new Error("history item fields missing");
-    }
-    return {
-      spreadId: row.spreadId,
-      question: typeof row.question === "string" ? row.question : "",
-      cards: Array.isArray(row.cards) ? (row.cards as SpreadHistoryItemV1["cards"]) : [],
-      prediction: row.prediction,
-      createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
-    };
-  });
   return {
-    items,
+    items: record.items.map(parseItem),
     nextCursor: typeof record.nextCursor === "string" ? record.nextCursor : null,
   };
 };
@@ -51,31 +61,79 @@ export const readingsView = (
   return { kind: "list", items: page.items };
 };
 
-export const fetchHistoryPage = async (userId: string): Promise<SpreadHistoryPageV1> => {
-  const base = historyBaseUrl();
-  if (!base) {
-    throw new Error("HISTORY_BASE_URL is not set");
-  }
-  const headers: Record<string, string> = { accept: "application/json" };
+const requestHeaders = (correlationId: string): Record<string, string> => {
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    [CORRELATION_HEADER]: correlationId,
+  };
   const internal = process.env.INTERNAL_SERVICE_TOKEN;
   if (internal) {
     headers["x-internal-token"] = internal;
   }
-  const response = await fetch(`${base}/users/${userId}/spread-history`, {
-    headers,
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error(`history ${response.status}`);
-  }
-  return parseHistoryPage(await response.json());
+  return headers;
 };
 
-export const itemBySpreadId = (
-  page: SpreadHistoryPageV1,
+const requireBaseUrl = (): string => {
+  const base = historyBaseUrl();
+  if (!base) {
+    throw new Error("HISTORY_BASE_URL is not set");
+  }
+  return base;
+};
+
+export const fetchHistoryPage = async (
+  userId: string,
+  { cursor = null, correlationId }: { cursor?: string | null; correlationId: string },
+): Promise<SpreadHistoryPageV1> => {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+  const response = await upstreamFetch(
+    "history",
+    `${requireBaseUrl()}/users/${userId}/spread-history${query}`,
+    { headers: requestHeaders(correlationId), cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new UpstreamError("history", "bad-status", response.status);
+  }
+  const body = await readUpstreamJson("history", response);
+  try {
+    return parseHistoryPage(body);
+  } catch {
+    throw new UpstreamError("history", "bad-body");
+  }
+};
+
+/** "removed" and "unknown" are different answers: only one of them may be looked up elsewhere. */
+export type HistoryItemLookup =
+  | { kind: "found"; item: SpreadHistoryItemV1 }
+  | { kind: "removed" }
+  | { kind: "unknown" };
+
+export const fetchHistoryItem = async (
+  userId: string,
   spreadId: string,
-): SpreadHistoryItemV1 | null =>
-  page.items.find((item) => item.spreadId === spreadId) ?? null;
+  correlationId: string,
+): Promise<HistoryItemLookup> => {
+  const response = await upstreamFetch(
+    "history",
+    `${requireBaseUrl()}/users/${userId}/spread-history/${spreadId}`,
+    { headers: requestHeaders(correlationId), cache: "no-store" },
+  );
+  if (response.status === 404) {
+    return { kind: "unknown" };
+  }
+  if (response.status === 410) {
+    return { kind: "removed" };
+  }
+  if (!response.ok) {
+    throw new UpstreamError("history", "bad-status", response.status);
+  }
+  const body = await readUpstreamJson("history", response);
+  try {
+    return { kind: "found", item: parseItem(body) };
+  } catch {
+    throw new UpstreamError("history", "bad-body");
+  }
+};
 
 export type ReadingDetailView =
   | { kind: "signed-out" }
@@ -84,20 +142,41 @@ export type ReadingDetailView =
   | { kind: "error"; message: string }
   | { kind: "ready"; item: SpreadHistoryItemV1 };
 
+const SPREAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The id travels into an upstream url path, so it is checked before it is ever interpolated. */
+export const isSpreadId = (value: string): boolean => SPREAD_ID.test(value);
+
+const itemFromSpread = (spread: SpreadDetailsV1): SpreadHistoryItemV1 => ({
+  spreadId: spread.spreadId,
+  question: spread.question,
+  cards: spread.cards,
+  prediction: spread.prediction,
+  createdAt: spread.createdAt,
+});
+
 /**
  * Decides what a reading page shows before any JSX exists, so the page never builds elements
  * inside a try/catch — React cannot catch render errors that way.
+ *
+ * History is a read model that trails the write side by a moment. A reading it has not seen yet
+ * is looked up where it was written, so the reading a visitor just made opens at once, but only
+ * for its owner and never once the visitor has removed it.
  */
 export const resolveReadingDetail = async ({
   userId,
   spreadId,
   configured,
-  loadPage,
+  loadItem,
+  loadFromWriteSide,
+  onError,
 }: {
   userId: string | null;
   spreadId: string;
   configured: boolean;
-  loadPage: (userId: string) => Promise<SpreadHistoryPageV1>;
+  loadItem: () => Promise<HistoryItemLookup>;
+  loadFromWriteSide: () => Promise<SpreadDetailsV1 | null>;
+  onError?: (cause: unknown) => void;
 }): Promise<ReadingDetailView> => {
   if (!userId) {
     return { kind: "signed-out" };
@@ -105,19 +184,31 @@ export const resolveReadingDetail = async ({
   if (!configured) {
     return { kind: "unconfigured" };
   }
+  if (!isSpreadId(spreadId)) {
+    return { kind: "missing" };
+  }
+
   try {
-    const page = await loadPage(userId);
-    const item = itemBySpreadId(page, spreadId);
-    return item ? { kind: "ready", item } : { kind: "missing" };
+    const found = await loadItem();
+    if (found.kind === "found") {
+      return { kind: "ready", item: found.item };
+    }
+    if (found.kind === "removed") {
+      return { kind: "missing" };
+    }
+    const written = await loadFromWriteSide();
+    return written && written.userId === userId
+      ? { kind: "ready", item: itemFromSpread(written) }
+      : { kind: "missing" };
   } catch (cause) {
-    return { kind: "error", message: cause instanceof Error ? cause.message : "history failed" };
+    onError?.(cause);
+    return {
+      kind: "error",
+      message:
+        cause instanceof UpstreamError ? USER_MESSAGES.savedUnavailable : USER_MESSAGES.somethingWrong,
+    };
   }
 };
-
-const SPREAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** The id travels into an upstream url path, so it is checked before it is ever interpolated. */
-export const isSpreadId = (value: string): boolean => SPREAD_ID.test(value);
 
 export type DeleteOutcome = {
   status: number;
@@ -125,11 +216,11 @@ export type DeleteOutcome = {
 };
 
 export const deleteOutcome = (upstreamStatus: number): DeleteOutcome => {
-  if (upstreamStatus === 404) {
-    return { status: 404, body: { error: "not found" } };
+  if (upstreamStatus === 404 || upstreamStatus === 410) {
+    return { status: 404, body: { error: USER_MESSAGES.readingAlreadyRemoved } };
   }
   if (upstreamStatus >= 200 && upstreamStatus < 300) {
     return { status: 200, body: { deleted: true } };
   }
-  return { status: 502, body: { error: `history ${upstreamStatus}` } };
+  return { status: 502, body: { error: USER_MESSAGES.removeFailed } };
 };
