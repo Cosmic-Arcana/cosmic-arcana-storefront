@@ -98,9 +98,9 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
 
       <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
         <aside className="flex flex-col gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">Sessions</h2>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-400">Sessions</h2>
           {feed.sessions.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
+            <p className="rounded-lg border border-dashed border-zinc-700 p-4 text-sm text-zinc-400">
               No agent has connected on your behalf yet.
             </p>
           ) : (
@@ -125,7 +125,7 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
                       className={`size-2 shrink-0 rounded-full ${session.open ? 'bg-emerald-400' : 'bg-zinc-600'}`}
                     />
                   </span>
-                  <span className="mt-1 block truncate font-mono text-xs text-zinc-500">
+                  <span className="mt-1 block truncate font-mono text-xs text-zinc-400">
                     {session.sessionId}
                   </span>
                   <span className="mt-2 block text-xs text-zinc-400">
@@ -139,11 +139,11 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
         </aside>
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-400">
             {selectedSession ? 'Session activity' : 'All activity'}
           </h2>
           {events.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-700 p-6 text-sm text-zinc-500">
+            <p className="rounded-lg border border-dashed border-zinc-700 p-6 text-sm text-zinc-400">
               Nothing recorded yet. Point an MCP client at <code>/mcp</code> with your delegated
               token and its calls will appear here as they happen.
             </p>
@@ -157,7 +157,7 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
                   className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="font-mono text-xs text-zinc-500">{time(event.occurredAt)}</span>
+                    <span className="font-mono text-xs text-zinc-400">{time(event.occurredAt)}</span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ring-1 ${KIND_STYLE[event.kind] ?? 'bg-zinc-700/40 text-zinc-300 ring-zinc-600'}`}
                     >
@@ -165,7 +165,7 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
                     </span>
                     {event.target && <span className="font-medium">{event.target}</span>}
                     {event.durationMs !== null && (
-                      <span className="text-xs text-zinc-500">{event.durationMs.toFixed(1)} ms</span>
+                      <span className="text-xs text-zinc-400">{event.durationMs.toFixed(1)} ms</span>
                     )}
                     {event.error && (
                       <span className="text-xs text-rose-300">
@@ -176,7 +176,7 @@ export function AgentActivityDashboard({ initialFeed }: { initialFeed: AgentActi
 
                   {(event.request !== null || event.response !== null) && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+                      <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-300">
                         request and response
                       </summary>
                       <div className="mt-2 grid gap-2 md:grid-cols-2">
@@ -201,7 +201,7 @@ function Payload({ label, value }: { label: string; value: unknown }) {
   }
   return (
     <div>
-      <p className="mb-1 text-xs uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="mb-1 text-xs uppercase tracking-wide text-zinc-400">{label}</p>
       <pre className="max-h-64 overflow-auto rounded-md bg-black/40 p-2 text-xs text-zinc-300">
         {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
       </pre>
