@@ -202,8 +202,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
             </div>
           ) : (
             <p className="text-sm text-[#d4d4d8]">
-              No cards until tarot-service-api answers. Set TAROT_BASE_URL. The empty deck is
-              decoration, not a reading.
+              Ask a question to draw cards. Until then the deck is decoration, not a reading.
             </p>
           )}
           <fieldset className="space-y-2">
