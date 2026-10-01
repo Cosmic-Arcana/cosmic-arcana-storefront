@@ -1,13 +1,33 @@
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
+import { CORRELATION_HEADER } from "./bff.ts";
 import { newIdempotencyKey } from "./spread-user";
+import { UpstreamError, readUpstreamJson, upstreamFetch } from "./upstream.ts";
 
 export const tarotBaseUrl = (): string =>
   (process.env.TAROT_BASE_URL ?? "").replace(/\/$/, "");
 
+const headersFor = (correlationId: string): Record<string, string> => {
+  const headers: Record<string, string> = { [CORRELATION_HEADER]: correlationId };
+  const internal = process.env.INTERNAL_SERVICE_TOKEN;
+  if (internal) {
+    headers["x-internal-token"] = internal;
+  }
+  return headers;
+};
+
+const parseSpread = (body: unknown): SpreadDetailsV1 => {
+  try {
+    return parseSpreadDetailsV1(body);
+  } catch {
+    throw new UpstreamError("tarot", "bad-body");
+  }
+};
+
 export const createSpread = async (
   question: string,
   userId: string,
+  correlationId: string,
 ): Promise<SpreadDetailsV1> => {
   const base = tarotBaseUrl();
   if (!base) {
@@ -19,25 +39,18 @@ export const createSpread = async (
     throw new Error("question is empty");
   }
 
-  const headers: Record<string, string> = {
-    "content-type": "application/json",
-    "idempotency-key": newIdempotencyKey(),
-  };
-  const internal = process.env.INTERNAL_SERVICE_TOKEN;
-  if (internal) {
-    headers["x-internal-token"] = internal;
-  }
-
-  const response = await fetch(`${base}/spreads`, {
+  const response = await upstreamFetch("tarot", `${base}/spreads`, {
     method: "POST",
-    headers,
+    headers: {
+      ...headersFor(correlationId),
+      "content-type": "application/json",
+      "idempotency-key": newIdempotencyKey(),
+    },
     body: JSON.stringify({ userId, question: trimmed }),
   });
 
-  const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(`tarot ${response.status}`);
+    throw new UpstreamError("tarot", "bad-status", response.status);
   }
-
-  return parseSpreadDetailsV1(body);
+  return parseSpread(await readUpstreamJson("tarot", response));
 };
