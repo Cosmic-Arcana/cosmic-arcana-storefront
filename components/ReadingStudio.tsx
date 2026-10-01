@@ -5,7 +5,9 @@ import { useState } from "react";
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
 import type { SceneCard } from "./ArcanaScene";
+import { askFailureMessage, type AskOutcome } from "../lib/ask-failure";
 import { cardLabel, positionLabel } from "../lib/card-label";
+import { USER_MESSAGES } from "../lib/user-messages";
 import { illustrateCards } from "../lib/cosmic-context";
 import { GRAPHICS_MODES } from "../lib/graphics-capability";
 import { liveWsUrl, useLiveSpreads } from "../lib/use-live-spreads";
@@ -38,27 +40,36 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
   const onAsk = async () => {
     setError(null);
     setBusy(true);
+
+    // null means the browser never reached the server, which reads differently from a refusal.
+    let outcome: AskOutcome | null;
     try {
       const response = await fetch("/api/spreads", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ question, consent: true }),
       });
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        const message =
-          body && typeof body === "object" && "error" in body
-            ? String((body as { error: unknown }).error)
-            : `request ${response.status}`;
-        throw new Error(message);
-      }
-      const parsed = parseSpreadDetailsV1(body);
-      setSpread(parsed);
-      onSpreadChange?.(parsed);
-    } catch (cause) {
+      outcome = { status: response.status, body: await response.json().catch(() => null) };
+    } catch {
+      outcome = null;
+    }
+
+    if (outcome === null || outcome.status >= 400) {
       setSpread(null);
       onSpreadChange?.(null);
-      setError(cause instanceof Error ? cause.message : "request failed");
+      setError(askFailureMessage(outcome));
+      setBusy(false);
+      return;
+    }
+
+    try {
+      const parsed = parseSpreadDetailsV1(outcome.body);
+      setSpread(parsed);
+      onSpreadChange?.(parsed);
+    } catch {
+      setSpread(null);
+      onSpreadChange?.(null);
+      setError(USER_MESSAGES.somethingWrong);
     } finally {
       setBusy(false);
     }
