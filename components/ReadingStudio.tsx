@@ -179,32 +179,34 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
               {error}
             </p>
           ) : null}
-          {spread ? (
-            <div className="space-y-2 text-sm text-[#e4e4e7]" data-spread-id={spread.spreadId}>
-              <p className="text-xs uppercase tracking-wide text-[#d4d4d8]">
-                Stub from tarot-service-api · AI-generated if interpretation is wired later
-              </p>
-              <p className="font-mono text-[11px] text-[#d4d4d8]">{spread.spreadId}</p>
-              <a className="text-sm text-amber-100 underline" href={`/readings/${spread.spreadId}`}>
-                Open saved reading
-              </a>
-              <p data-testid="prediction" className="whitespace-pre-line">
-                {spread.prediction}
-              </p>
-              <div data-testid="cosmic-context" className="space-y-1 text-xs text-[#d4d4d8]">
-                <p>Symbolic sky (fixture, not a live NASA call). It did not choose these cards.</p>
-                {cosmic.map((row) => (
-                  <p key={`${row.positionKey}-${row.cardId}`}>
-                    {row.positionKey}: {row.motif}
-                  </p>
-                ))}
+          <div aria-live="polite" data-testid="reading-live-region">
+            {spread ? (
+              <div className="space-y-2 text-sm text-[#e4e4e7]" data-spread-id={spread.spreadId}>
+                <p className="text-xs uppercase tracking-wide text-[#d4d4d8]">
+                  Stub from tarot-service-api · AI-generated if interpretation is wired later
+                </p>
+                <p className="font-mono text-[11px] text-[#d4d4d8]">{spread.spreadId}</p>
+                <a className="text-sm text-amber-100 underline" href={`/readings/${spread.spreadId}`}>
+                  Open saved reading
+                </a>
+                <p data-testid="prediction" className="whitespace-pre-line">
+                  {spread.prediction}
+                </p>
+                <div data-testid="cosmic-context" className="space-y-1 text-xs text-[#d4d4d8]">
+                  <p>Symbolic sky (fixture, not a live NASA call). It did not choose these cards.</p>
+                  {cosmic.map((row) => (
+                    <p key={`${row.positionKey}-${row.cardId}`}>
+                      {row.positionKey}: {row.motif}
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-[#d4d4d8]">
-              Ask a question to draw cards. Until then the deck is decoration, not a reading.
-            </p>
-          )}
+            ) : (
+              <p className="text-sm text-[#d4d4d8]">
+                Ask a question to draw cards. Until then the deck is decoration, not a reading.
+              </p>
+            )}
+          </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium text-amber-100">Graphics</legend>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Graphics mode">
