@@ -102,6 +102,29 @@ export const fetchHistoryPage = async (
   }
 };
 
+const HISTORY_NOT_FOUND = "spread not found";
+
+/**
+ * A 404 only means "history has not seen this reading" when it is history's own answer. The same
+ * status comes back from a proxy, or from an older history that has no such route at all, and
+ * treating those as "unknown" would send the lookup to the write side — which knows nothing of
+ * removal and would bring back a reading the visitor deleted.
+ */
+const isHistoryNotFound = async (response: Response): Promise<boolean> => {
+  try {
+    const body: unknown = await response.json();
+    return (
+      typeof body === "object" && body !== null && (body as { message?: unknown }).message === HISTORY_NOT_FOUND
+    );
+  } catch {
+    return false;
+  }
+};
+
+const failWith = (error: UpstreamError): never => {
+  throw error;
+};
+
 /** "removed" and "unknown" are different answers: only one of them may be looked up elsewhere. */
 export type HistoryItemLookup =
   | { kind: "found"; item: SpreadHistoryItemV1 }
@@ -119,7 +142,9 @@ export const fetchHistoryItem = async (
     { headers: requestHeaders(correlationId), cache: "no-store" },
   );
   if (response.status === 404) {
-    return { kind: "unknown" };
+    return (await isHistoryNotFound(response))
+      ? { kind: "unknown" }
+      : failWith(new UpstreamError("history", "bad-status", 404));
   }
   if (response.status === 410) {
     return { kind: "removed" };

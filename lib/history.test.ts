@@ -131,11 +131,27 @@ describe("fetchHistoryItem", () => {
   });
 
   it("tells unknown (404) from removed (410)", async () => {
-    stubFetch(new Response("{}", { status: 404 }));
+    stubFetch(Response.json({ statusCode: 404, message: "spread not found" }, { status: 404 }));
     assert.deepEqual(await lookup(), { kind: "unknown" });
 
     stubFetch(new Response("{}", { status: 410 }));
     assert.deepEqual(await lookup(), { kind: "removed" });
+  });
+
+  it("fails safe when a 404 is not history's own answer, as from an older history without this route", async () => {
+    // Reading that as "unknown" would send the lookup to the write side, which has no notion of
+    // removal and would bring back a reading the visitor deleted.
+    stubFetch(
+      Response.json({ statusCode: 404, error: "Not Found", message: "Cannot GET /users/u/spread-history/s" }, { status: 404 }),
+    );
+    await assert.rejects(lookup(), (error: unknown) => {
+      assert.ok(error instanceof UpstreamError);
+      assert.equal(error.upstreamStatus, 404);
+      return true;
+    });
+
+    stubFetch(new Response("<html>nginx 404</html>", { status: 404 }));
+    await assert.rejects(lookup(), (error: unknown) => error instanceof UpstreamError);
   });
 
   it("treats any other status as a failure of history", async () => {
