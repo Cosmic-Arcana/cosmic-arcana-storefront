@@ -2,7 +2,8 @@ import { USER_MESSAGES } from "./user-messages.ts";
 
 export type AskOutcome = { status: number; body: unknown };
 
-const sentenceFrom = (body: unknown): string | null => {
+/** The sentence our own BFF chose for the visitor, when the body is one of ours. */
+export const serverSentence = (body: unknown): string | null => {
   if (body && typeof body === "object" && "error" in body) {
     const { error } = body as { error: unknown };
     return typeof error === "string" && error.length > 0 ? error : null;
@@ -18,7 +19,7 @@ export const askFailureMessage = (outcome: AskOutcome | null): string => {
   if (outcome.status === 401) {
     return USER_MESSAGES.signInRequired;
   }
-  const sentence = sentenceFrom(outcome.body);
+  const sentence = serverSentence(outcome.body);
   if (sentence) {
     return sentence;
   }
