@@ -54,3 +54,34 @@ export const createSpread = async (
   }
   return parseSpread(await readUpstreamJson("tarot", response));
 };
+
+// A page render is waiting on this read, unlike a draw that may wait on a language model.
+const readTimeoutMs = (): number => {
+  const configured = Number(process.env.TAROT_READ_TIMEOUT_MS);
+  return Number.isFinite(configured) && configured > 0 ? configured : 5_000;
+};
+
+/** The reading as the write side holds it, or null when tarot has never heard of it. */
+export const fetchSpread = async (
+  spreadId: string,
+  correlationId: string,
+): Promise<SpreadDetailsV1 | null> => {
+  const base = tarotBaseUrl();
+  if (!base) {
+    throw new Error("TAROT_BASE_URL is not set");
+  }
+
+  const response = await upstreamFetch(
+    "tarot",
+    `${base}/spreads/${spreadId}`,
+    { headers: headersFor(correlationId), cache: "no-store" },
+    readTimeoutMs(),
+  );
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new UpstreamError("tarot", "bad-status", response.status);
+  }
+  return parseSpread(await readUpstreamJson("tarot", response));
+};
