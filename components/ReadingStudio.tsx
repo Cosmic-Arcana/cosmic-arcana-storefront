@@ -5,6 +5,7 @@ import { useState } from "react";
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
 import type { SceneCard } from "./ArcanaScene";
+import { cardLabel, positionLabel } from "../lib/card-label";
 import { illustrateCards } from "../lib/cosmic-context";
 import { GRAPHICS_MODES } from "../lib/graphics-capability";
 import { liveWsUrl, useLiveSpreads } from "../lib/use-live-spreads";
@@ -112,7 +113,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
               data-reversed={card.reversed ? "true" : "false"}
               className="rounded-full border border-amber-300/40 bg-black/55 px-3 py-1 text-[11px] tracking-wide text-amber-100"
             >
-              {card.positionKey} · {card.cardId}
+              {positionLabel(card.positionKey)} · {cardLabel(card.cardId)}
               {card.reversed ? " · reversed" : ""}
             </span>
           ))}
