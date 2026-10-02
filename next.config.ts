@@ -8,6 +8,8 @@ const scriptSrc =
     : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
 
 const nextConfig: NextConfig = {
+  // Every response would otherwise announce the framework, which only helps someone choosing exploits.
+  poweredByHeader: false,
   productionBrowserSourceMaps: true,
   async headers() {
     return [
