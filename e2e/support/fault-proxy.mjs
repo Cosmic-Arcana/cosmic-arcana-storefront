@@ -16,6 +16,7 @@ if (!listen || !target) {
 let fault = { kind: "pass" };
 // What the app last sent through, so a test can check what actually crossed the boundary.
 let lastForwarded = null;
+let forwardedCount = 0;
 
 const readJson = (req) =>
   new Promise((resolve, reject) => {
@@ -31,6 +32,7 @@ const readJson = (req) =>
   });
 
 const forward = (req, res) => {
+  forwardedCount += 1;
   lastForwarded = { method: req.method, url: req.url, headers: { ...req.headers } };
   const upstream = http.request(
     { host: "127.0.0.1", port: target, method: req.method, path: req.url, headers: req.headers },
@@ -47,6 +49,12 @@ const forward = (req, res) => {
 };
 
 const server = http.createServer(async (req, res) => {
+  if (req.url === "/__count") {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ count: forwardedCount }));
+    return;
+  }
+
   if (req.url === "/__last") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify(lastForwarded));

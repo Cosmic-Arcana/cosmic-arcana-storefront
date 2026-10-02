@@ -132,6 +132,18 @@ E2E_BROWSER_CHANNEL=chrome npm run e2e
 | `live-feed` | other people's cards appear, their question never does |
 | `pages` | clean console, titles, 404, keyboard-only journey, crawlers, headers, axe |
 | `mobile` | phone screen: ask on the first screen, no sideways scroll, tap targets |
+| `production` | the real build (`E2E_PRODUCTION=1`): signed out, signed in as two users who must not see each other's readings, no accidental sign-out, strict CSP |
+
+### The production-build project
+
+```bash
+E2E_BROWSER_CHANNEL=chrome npm run e2e:production    # next build, next start on :3101, then the tests
+```
+
+It is a separate run because it pays for a production build, and because development hides what it
+tests: there is no demo user, no `AGENT_DASHBOARD_DEV_USER` shortcut and no React `eval()`. Signed-in
+tests mint real Auth0 SDK session cookies (`@auth0/nextjs-auth0/testing`) for any account, against a
+dummy tenant, so two users can be signed in at once and checked against each other.
 
 How the tests stay independent: one worker, a client address and questions of their own per test, a
 clean demo history at the start, and dummy Auth0 values so a test can never reach a real tenant. The

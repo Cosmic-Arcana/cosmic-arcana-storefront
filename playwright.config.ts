@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { AGENT_USER, HISTORY_PROXY, TAROT_PROXY } from "./e2e/support/stack";
+import { AGENT_USER, E2E_AUTH0_SECRET, HISTORY_PROXY, TAROT_PROXY } from "./e2e/support/stack";
 
 const port = Number(process.env.E2E_PORT ?? 3100);
 // localhost, not 127.0.0.1: the Next dev server refuses its own /_next chunks to any other host,
@@ -11,6 +11,13 @@ const channel = process.env.E2E_BROWSER_CHANNEL || undefined;
 const externalServer = Boolean(process.env.E2E_BASE_URL);
 
 const proxyPort = (url: string) => new URL(url).port;
+
+// `E2E_PRODUCTION=1` runs only the production-build project, against `next build` + `next start`.
+// The development project and the production project are separate runs because each starts its
+// own server, and a production build is slow enough that it should not be paid for on every run.
+const production = process.env.E2E_PRODUCTION === "1";
+const prodPort = Number(process.env.E2E_PROD_PORT ?? 3101);
+const prodBaseURL = `http://localhost:${prodPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,18 +38,26 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [
-    {
-      name: "desktop",
-      testIgnore: /mobile\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"], channel },
-    },
-    {
-      name: "mobile",
-      testMatch: /mobile\.spec\.ts/,
-      use: { ...devices["Pixel 7"], channel },
-    },
-  ],
+  projects: production
+    ? [
+        {
+          name: "production",
+          testMatch: /production\.spec\.ts/,
+          use: { ...devices["Desktop Chrome"], channel, baseURL: prodBaseURL },
+        },
+      ]
+    : [
+        {
+          name: "desktop",
+          testIgnore: /(mobile|production)\.spec\.ts/,
+          use: { ...devices["Desktop Chrome"], channel },
+        },
+        {
+          name: "mobile",
+          testMatch: /mobile\.spec\.ts/,
+          use: { ...devices["Pixel 7"], channel },
+        },
+      ],
   webServer: externalServer
     ? undefined
     : [
@@ -57,17 +72,22 @@ export default defineConfig({
           reuseExistingServer: !process.env.CI,
         },
         {
-          command: `npm run dev -- --port ${port}`,
-          url: baseURL,
+          command: production
+            ? `npm run build && npm run start -- --port ${prodPort}`
+            : `npm run dev -- --port ${port}`,
+          url: production ? prodBaseURL : baseURL,
           reuseExistingServer: !process.env.CI,
-          timeout: 180_000,
+          // A production build comes before the server can answer.
+          timeout: production ? 420_000 : 180_000,
           env: {
             NEXT_TELEMETRY_DISABLED: "1",
-            APP_BASE_URL: baseURL,
+            APP_BASE_URL: production ? prodBaseURL : baseURL,
             TAROT_BASE_URL: TAROT_PROXY,
             HISTORY_BASE_URL: HISTORY_PROXY,
             MCP_SERVICE_URL: process.env.E2E_MCP_URL ?? "http://127.0.0.1:3003",
+            // Read at build time, so it must be set for `next build` as well.
             NEXT_PUBLIC_TAROT_WS_URL: "ws://127.0.0.1:3004/live",
+            // Set on the production server on purpose: the tests prove it is ignored there.
             AGENT_DASHBOARD_DEV_USER: AGENT_USER,
             // Short on purpose: the hanging-dependency tests wait for exactly this long.
             TAROT_TIMEOUT_MS: "1500",
@@ -76,7 +96,7 @@ export default defineConfig({
             AUTH0_DOMAIN: "e2e.invalid",
             AUTH0_CLIENT_ID: "e2e-client",
             AUTH0_CLIENT_SECRET: "e2e-secret",
-            AUTH0_SECRET: "e2e0".repeat(16),
+            AUTH0_SECRET: E2E_AUTH0_SECRET,
           },
         },
       ],
