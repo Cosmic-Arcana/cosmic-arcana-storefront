@@ -17,7 +17,45 @@ const proxyPort = (url: string) => new URL(url).port;
 // own server, and a production build is slow enough that it should not be paid for on every run.
 const production = process.env.E2E_PRODUCTION === "1";
 const prodPort = Number(process.env.E2E_PROD_PORT ?? 3101);
-const prodBaseURL = `http://localhost:${prodPort}`;
+// An external URL is a storefront that is already running, such as the container under test.
+const prodBaseURL = process.env.E2E_BASE_URL ?? `http://localhost:${prodPort}`;
+// Proxies listen on this address; a containerised storefront needs 0.0.0.0 to reach them.
+const proxyHost = process.env.E2E_PROXY_HOST ?? "127.0.0.1";
+
+const faultProxy = (proxy: string, target: number) => ({
+  command: `node e2e/support/fault-proxy.mjs --listen=${proxyPort(proxy)} --target=${target} --host=${proxyHost}`,
+  url: `${proxy}/__fault`,
+  reuseExistingServer: !process.env.CI,
+});
+
+const storefront = {
+  command: production
+    ? `npm run build && npm run start -- --port ${prodPort}`
+    : `npm run dev -- --port ${port}`,
+  url: production ? prodBaseURL : baseURL,
+  reuseExistingServer: !process.env.CI,
+  // A production build comes before the server can answer.
+  timeout: production ? 420_000 : 180_000,
+  env: {
+    NEXT_TELEMETRY_DISABLED: "1",
+    APP_BASE_URL: production ? prodBaseURL : baseURL,
+    TAROT_BASE_URL: TAROT_PROXY,
+    HISTORY_BASE_URL: HISTORY_PROXY,
+    MCP_SERVICE_URL: process.env.E2E_MCP_URL ?? "http://127.0.0.1:3003",
+    // Read at build time, so it must be set for `next build` as well.
+    NEXT_PUBLIC_TAROT_WS_URL: "ws://127.0.0.1:3004/live",
+    // Set on the production server on purpose: the tests prove it is ignored there.
+    AGENT_DASHBOARD_DEV_USER: AGENT_USER,
+    // Short on purpose: the hanging-dependency tests wait for exactly this long.
+    TAROT_TIMEOUT_MS: "1500",
+    HISTORY_TIMEOUT_MS: "1500",
+    // Dummy values replace whatever .env.local holds, so a test never reaches a real tenant.
+    AUTH0_DOMAIN: "e2e.invalid",
+    AUTH0_CLIENT_ID: "e2e-client",
+    AUTH0_CLIENT_SECRET: "e2e-secret",
+    AUTH0_SECRET: E2E_AUTH0_SECRET,
+  },
+};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -58,46 +96,11 @@ export default defineConfig({
           use: { ...devices["Pixel 7"], channel },
         },
       ],
-  webServer: externalServer
-    ? undefined
-    : [
-        {
-          command: `node e2e/support/fault-proxy.mjs --listen=${proxyPort(TAROT_PROXY)} --target=3004`,
-          url: `${TAROT_PROXY}/__fault`,
-          reuseExistingServer: !process.env.CI,
-        },
-        {
-          command: `node e2e/support/fault-proxy.mjs --listen=${proxyPort(HISTORY_PROXY)} --target=3005`,
-          url: `${HISTORY_PROXY}/__fault`,
-          reuseExistingServer: !process.env.CI,
-        },
-        {
-          command: production
-            ? `npm run build && npm run start -- --port ${prodPort}`
-            : `npm run dev -- --port ${port}`,
-          url: production ? prodBaseURL : baseURL,
-          reuseExistingServer: !process.env.CI,
-          // A production build comes before the server can answer.
-          timeout: production ? 420_000 : 180_000,
-          env: {
-            NEXT_TELEMETRY_DISABLED: "1",
-            APP_BASE_URL: production ? prodBaseURL : baseURL,
-            TAROT_BASE_URL: TAROT_PROXY,
-            HISTORY_BASE_URL: HISTORY_PROXY,
-            MCP_SERVICE_URL: process.env.E2E_MCP_URL ?? "http://127.0.0.1:3003",
-            // Read at build time, so it must be set for `next build` as well.
-            NEXT_PUBLIC_TAROT_WS_URL: "ws://127.0.0.1:3004/live",
-            // Set on the production server on purpose: the tests prove it is ignored there.
-            AGENT_DASHBOARD_DEV_USER: AGENT_USER,
-            // Short on purpose: the hanging-dependency tests wait for exactly this long.
-            TAROT_TIMEOUT_MS: "1500",
-            HISTORY_TIMEOUT_MS: "1500",
-            // Dummy values replace whatever .env.local holds, so a test never reaches a real tenant.
-            AUTH0_DOMAIN: "e2e.invalid",
-            AUTH0_CLIENT_ID: "e2e-client",
-            AUTH0_CLIENT_SECRET: "e2e-secret",
-            AUTH0_SECRET: E2E_AUTH0_SECRET,
-          },
-        },
-      ],
+  // The proxies are always ours to start: they are how a test breaks a dependency. Only the
+  // storefront can be someone else's, when E2E_BASE_URL points at one that is already running.
+  webServer: [
+    faultProxy(TAROT_PROXY, 3004),
+    faultProxy(HISTORY_PROXY, 3005),
+    ...(externalServer ? [] : [storefront]),
+  ],
 });

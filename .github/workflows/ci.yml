@@ -21,10 +21,10 @@ jobs:
       packages: write
     with:
       service-name: cosmic-arcana-storefront
-      tier: liveness
-      test-command: ''
-      # No image yet: the storefront joins application validation once it has routes to validate.
-      build-image: false
-      dispatch: false
+      # The storefront takes part in the application's behaviour, and application validation runs
+      # its browser e2e against this image.
+      tier: flow
+      build-image: true
+      dispatch: true
     secrets:
       INFRA_DISPATCH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}

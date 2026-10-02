@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+.next
+node_modules
+playwright-report
+test-results
+coverage
+*.md
+.env
+.env.*
+Dockerfile
+.dockerignore
+lighthouse-*.json
+*.tsbuildinfo
