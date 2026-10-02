@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test --experimental-strip-types \"lib/**/*.test.ts\"",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:production": "E2E_PRODUCTION=1 playwright test"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.27.0",
