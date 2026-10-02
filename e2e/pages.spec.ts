@@ -60,6 +60,20 @@ test.describe("Feature: every page says what it is", () => {
   });
 });
 
+test.describe("Feature: orchestrators can ask whether the storefront is alive", () => {
+  for (const route of ["/health/live", "/health/ready"]) {
+    test(`Given ${route}, When it is asked, Then it answers 200 with a tiny body that reveals nothing and is never cached`, async ({
+      request,
+    }) => {
+      const response = await request.get(route);
+
+      expect(response.status()).toBe(200);
+      expect(await response.json()).toEqual({ status: "ok" });
+      expect(response.headers()["cache-control"]).toMatch(/no-store/);
+    });
+  }
+});
+
 test.describe("Feature: pages that do not exist", () => {
   test("Given an unknown address, When it is opened, Then the answer is 404 and the navigation is still there", async ({
     page,
