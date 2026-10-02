@@ -5,6 +5,9 @@ import { useState } from "react";
 import { parseSpreadDetailsV1, type SpreadDetailsV1 } from "@cosmic-arcana/sdk";
 
 import type { SceneCard } from "./ArcanaScene";
+import { askFailureMessage, type AskOutcome } from "../lib/ask-failure";
+import { cardLabel, positionLabel } from "../lib/card-label";
+import { USER_MESSAGES } from "../lib/user-messages";
 import { illustrateCards } from "../lib/cosmic-context";
 import { GRAPHICS_MODES } from "../lib/graphics-capability";
 import { liveWsUrl, useLiveSpreads } from "../lib/use-live-spreads";
@@ -37,27 +40,36 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
   const onAsk = async () => {
     setError(null);
     setBusy(true);
+
+    // null means the browser never reached the server, which reads differently from a refusal.
+    let outcome: AskOutcome | null;
     try {
       const response = await fetch("/api/spreads", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ question, consent: true }),
       });
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        const message =
-          body && typeof body === "object" && "error" in body
-            ? String((body as { error: unknown }).error)
-            : `request ${response.status}`;
-        throw new Error(message);
-      }
-      const parsed = parseSpreadDetailsV1(body);
-      setSpread(parsed);
-      onSpreadChange?.(parsed);
-    } catch (cause) {
+      outcome = { status: response.status, body: await response.json().catch(() => null) };
+    } catch {
+      outcome = null;
+    }
+
+    if (outcome === null || outcome.status >= 400) {
       setSpread(null);
       onSpreadChange?.(null);
-      setError(cause instanceof Error ? cause.message : "request failed");
+      setError(askFailureMessage(outcome));
+      setBusy(false);
+      return;
+    }
+
+    try {
+      const parsed = parseSpreadDetailsV1(outcome.body);
+      setSpread(parsed);
+      onSpreadChange?.(parsed);
+    } catch {
+      setSpread(null);
+      onSpreadChange?.(null);
+      setError(USER_MESSAGES.somethingWrong);
     } finally {
       setBusy(false);
     }
@@ -70,7 +82,7 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
       data-compact={compact ? "true" : "false"}
     >
       <section
-        className={compact ? "relative h-full min-h-0 flex-1" : "relative h-[70vh] min-h-[420px]"}
+        className={compact ? "relative h-full min-h-0 flex-1" : "relative h-[34svh] min-h-[220px] lg:h-[70vh] lg:min-h-[420px]"}
         aria-label="Three-dimensional tarot deck. Move the pointer to tilt the cards."
         data-testid="tarot-scene"
       >
@@ -112,14 +124,14 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
               data-reversed={card.reversed ? "true" : "false"}
               className="rounded-full border border-amber-300/40 bg-black/55 px-3 py-1 text-[11px] tracking-wide text-amber-100"
             >
-              {card.positionKey} · {card.cardId}
+              {positionLabel(card.positionKey)} · {cardLabel(card.cardId)}
               {card.reversed ? " · reversed" : ""}
             </span>
           ))}
         </div>
       </section>
       {compact ? null : (
-        <aside className="flex flex-col gap-4 border-t border-violet-500/20 bg-[#0b0714] p-6 lg:border-l lg:border-t-0">
+        <aside className="order-first flex flex-col gap-4 border-b border-violet-500/20 bg-[#0b0714] p-6 lg:order-none lg:border-b-0 lg:border-l">
           <p className="text-xs uppercase tracking-[0.2em] text-violet-200">Cosmic Arcana</p>
           <h1 className="text-2xl font-semibold text-[#f5f3ff]">Fictional reading</h1>
           <p className="text-sm leading-6 text-[#e4e4e7]">
@@ -144,10 +156,10 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             maxLength={1000}
-            rows={5}
+            rows={3}
             placeholder="Ask a question"
             aria-describedby="question-help"
-            className="resize-none rounded-xl border border-violet-400 bg-[#160f24] p-3 text-sm text-[#f5f3ff] outline-none focus:border-amber-200"
+            className="resize-none rounded-xl border border-violet-400 bg-[#160f24] p-3 text-sm text-[#f5f3ff] outline-none focus:border-amber-200 lg:h-32"
             disabled={busy}
           />
           <p id="question-help" className="text-xs text-[#d4d4d8]">
@@ -178,31 +190,34 @@ export function ReadingStudio({ compact = false, onSpreadChange }: ReadingStudio
               {error}
             </p>
           ) : null}
-          {spread ? (
-            <div className="space-y-2 text-sm text-[#e4e4e7]" data-spread-id={spread.spreadId}>
-              <p className="text-xs uppercase tracking-wide text-[#d4d4d8]">
-                Stub from tarot-service-api · AI-generated if interpretation is wired later
-              </p>
-              <p className="font-mono text-[11px] text-[#d4d4d8]">{spread.spreadId}</p>
-              <a className="text-sm text-amber-100 underline" href={`/readings/${spread.spreadId}`}>
-                Open saved reading
-              </a>
-              <p>{spread.prediction}</p>
-              <div data-testid="cosmic-context" className="space-y-1 text-xs text-[#d4d4d8]">
-                <p>Symbolic sky (fixture, not a live NASA call). It did not choose these cards.</p>
-                {cosmic.map((row) => (
-                  <p key={`${row.positionKey}-${row.cardId}`}>
-                    {row.positionKey}: {row.motif}
-                  </p>
-                ))}
+          <div aria-live="polite" data-testid="reading-live-region">
+            {spread ? (
+              <div className="space-y-2 text-sm text-[#e4e4e7]" data-spread-id={spread.spreadId}>
+                <p className="text-xs uppercase tracking-wide text-[#d4d4d8]">
+                  Stub from tarot-service-api · AI-generated if interpretation is wired later
+                </p>
+                <p className="font-mono text-[11px] text-[#d4d4d8]">{spread.spreadId}</p>
+                <a className="text-sm text-amber-100 underline" href={`/readings/${spread.spreadId}`}>
+                  Open saved reading
+                </a>
+                <p data-testid="prediction" className="whitespace-pre-line">
+                  {spread.prediction}
+                </p>
+                <div data-testid="cosmic-context" className="space-y-1 text-xs text-[#d4d4d8]">
+                  <p>Symbolic sky (fixture, not a live NASA call). It did not choose these cards.</p>
+                  {cosmic.map((row) => (
+                    <p key={`${row.positionKey}-${row.cardId}`}>
+                      {row.positionKey}: {row.motif}
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-[#d4d4d8]">
-              No cards until tarot-service-api answers. Set TAROT_BASE_URL. The empty deck is
-              decoration, not a reading.
-            </p>
-          )}
+            ) : (
+              <p className="text-sm text-[#d4d4d8]">
+                Ask a question to draw cards. Until then the deck is decoration, not a reading.
+              </p>
+            )}
+          </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium text-amber-100">Graphics</legend>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Graphics mode">

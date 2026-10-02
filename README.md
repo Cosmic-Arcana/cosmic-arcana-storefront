@@ -108,6 +108,38 @@ The Next.js API layer is the **only** API the frontend talks to. It exists exclu
 
 The storefront does not generate predictions, call NASA, talk to the AI model or expose tools to the agent. Those responsibilities belong to the other services; the storefront asks for them and presents the results.
 
+## End-to-end tests
+
+Playwright drives the real UI against the real backend (tarot, history, ai, nasa, mcp, their databases
+and Redis). The scenarios are written Given / When / Then and live in `e2e/`.
+
+```bash
+# 1. the application, from cosmic-arcana-infrastructure
+docker compose -f compose/application.yml -f compose/load.yml -f compose/e2e.yml up -d --wait
+
+# 2. the tests (starts its own storefront on :3100 and two fault proxies on :4004 and :4005)
+npx playwright install chromium          # once; or reuse the installed Chrome with the next line
+E2E_BROWSER_CHANNEL=chrome npm run e2e
+```
+
+| Spec | What it protects |
+| --- | --- |
+| `core-flow` | ask, draw, loading state, the fiction and symbolic-sky notices |
+| `ask-validation` | consent and length rules in the form and the endpoint, rate limit, markup stays text |
+| `saved-readings` | list, paging past 20, deep links, a reading opened right after it is made, removal |
+| `dependency-failures` | tarot or history down, failing, garbled or hanging: friendly text, right status, in time |
+| `agent-activity` | what an agent did on the user's behalf, live and per session |
+| `live-feed` | other people's cards appear, their question never does |
+| `pages` | clean console, titles, 404, keyboard-only journey, crawlers, headers, axe |
+| `mobile` | phone screen: ask on the first screen, no sideways scroll, tap targets |
+
+How the tests stay independent: one worker, a client address and questions of their own per test, a
+clean demo history at the start, and dummy Auth0 values so a test can never reach a real tenant. The
+storefront under test calls tarot and history through **fault proxies**; a test flips one to
+`down`, `hang`, `garbage`, `status` or `delay` to break that dependency on demand, because a
+server-side fetch cannot be intercepted from the browser. `E2E_BASE_URL` points the suite at an
+already running storefront, but the dependency-failure specs need the bundled one.
+
 ## On the horizon
 
 Ideas that may shape the project next. In the spirit of spontaneous development, they are directions rather than commitments:

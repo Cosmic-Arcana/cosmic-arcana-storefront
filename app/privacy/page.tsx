@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "Privacy",
+};
+
 export default function PrivacyPage() {
   return (
     <main id="main" className="mx-auto max-w-2xl space-y-4 p-10 text-sm leading-6 text-[#e4e4e7]">

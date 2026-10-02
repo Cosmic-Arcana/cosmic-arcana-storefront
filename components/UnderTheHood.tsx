@@ -57,6 +57,8 @@ export function UnderTheHood({ spreadJson }: { spreadJson: unknown }) {
           </summary>
           <pre
             data-json="spread"
+            tabIndex={0}
+            aria-label="Spread JSON"
             className="mt-2 max-h-64 overflow-auto rounded-lg bg-black/50 p-3 text-xs text-[#e4e4e7]"
           >
             {JSON.stringify(spreadJson ?? { status: "no spread yet" }, null, 2)}
@@ -68,6 +70,8 @@ export function UnderTheHood({ spreadJson }: { spreadJson: unknown }) {
           </summary>
           <pre
             data-json="stars"
+            tabIndex={0}
+            aria-label="Star collection JSON"
             className="mt-2 max-h-64 overflow-auto rounded-lg bg-black/50 p-3 text-xs text-[#e4e4e7]"
           >
             {JSON.stringify(hood?.stars ?? { status: "loading" }, null, 2)}
@@ -90,6 +94,8 @@ export function UnderTheHood({ spreadJson }: { spreadJson: unknown }) {
           ) : null}
           <pre
             data-json="agent"
+            tabIndex={0}
+            aria-label="Agent activity JSON"
             className="mt-2 max-h-80 overflow-auto rounded-lg bg-black/50 p-3 text-xs text-[#e4e4e7]"
           >
             {JSON.stringify(hood?.agent ?? { status: "loading" }, null, 2)}
@@ -117,7 +123,7 @@ export function UnderTheHood({ spreadJson }: { spreadJson: unknown }) {
                     {row.kind}
                     {row.target ? ` · ${row.target}` : ""}
                   </p>
-                  <pre className="mt-2 overflow-auto text-xs">
+                  <pre tabIndex={0} aria-label="Request and response" className="mt-2 overflow-auto text-xs">
                     {JSON.stringify({ request: row.request, response: row.response }, null, 2)}
                   </pre>
                 </li>

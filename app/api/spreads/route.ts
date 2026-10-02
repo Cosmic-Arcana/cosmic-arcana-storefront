@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-
 import { decideAsk } from "../../../lib/ask";
 import { auth0 } from "../../../lib/auth0";
+import { beginRequest, describeFailure } from "../../../lib/bff";
 import { allowRequest } from "../../../lib/rate-limit";
 import { resolveSpreadUserId } from "../../../lib/spread-user";
 import { createSpread, tarotBaseUrl } from "../../../lib/tarot";
+import { USER_MESSAGES } from "../../../lib/user-messages";
 
 const clientKey = (request: Request): string =>
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -20,6 +20,7 @@ const readJson = async (request: Request): Promise<unknown> => {
 };
 
 export async function POST(request: Request) {
+  const { correlationId, respond } = beginRequest(request, "/api/spreads");
   const allowed = allowRequest(clientKey(request));
   const configured = Boolean(tarotBaseUrl());
   // Only read the body once the request has earned it; a flood never reaches the parser.
@@ -35,23 +36,22 @@ export async function POST(request: Request) {
 
   switch (decision.kind) {
     case "rate-limited":
-      return NextResponse.json({ error: "rate limited" }, { status: 429 });
+      return respond(429, { error: USER_MESSAGES.rateLimited }, "rate-limited");
     case "unconfigured":
-      return NextResponse.json({ error: "tarot unconfigured" }, { status: 503 });
+      return respond(503, { error: USER_MESSAGES.cardsUnavailable }, "unconfigured");
     case "invalid":
-      return NextResponse.json({ error: decision.reason }, { status: 400 });
+      return respond(400, { error: decision.reason }, "invalid");
     case "signed-out":
-      return NextResponse.json({ error: "sign in required" }, { status: 401 });
+      return respond(401, { error: USER_MESSAGES.signInRequired }, "signed-out");
     default:
       break;
   }
 
   try {
-    const spread = await createSpread(decision.question, decision.userId);
-    return NextResponse.json(spread);
+    const spread = await createSpread(decision.question, decision.userId, correlationId);
+    return respond(200, spread, "created");
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : "spread failed";
-    const status = message.startsWith("tarot ") ? 502 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const failure = describeFailure(cause);
+    return respond(failure.status, { error: failure.message }, "error", failure.fields);
   }
 }
