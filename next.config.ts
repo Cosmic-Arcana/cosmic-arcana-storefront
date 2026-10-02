@@ -8,6 +8,9 @@ const scriptSrc =
     : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
 
 const nextConfig: NextConfig = {
+  // Only the image build asks for this: it traces just the files the server uses, which is most of
+  // the difference between a 1.3 GB image and a small one. `next start` and its tests are unchanged.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   // Every response would otherwise announce the framework, which only helps someone choosing exploits.
   poweredByHeader: false,
   productionBrowserSourceMaps: true,
