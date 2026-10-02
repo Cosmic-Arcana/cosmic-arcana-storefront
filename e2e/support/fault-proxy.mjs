@@ -4,6 +4,9 @@ const args = Object.fromEntries(
   process.argv.slice(2).map((arg) => arg.replace(/^--/, "").split("=")),
 );
 const listen = Number(args.listen);
+// 127.0.0.1 keeps the proxy private. A storefront in a container reaches it through the host's
+// address instead, which needs 0.0.0.0, so that run sets --host explicitly.
+const host = args.host ?? "127.0.0.1";
 const target = Number(args.target);
 
 if (!listen || !target) {
@@ -99,6 +102,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(listen, "127.0.0.1", () => {
-  console.log(`fault proxy listening on ${listen}, forwarding to ${target}`);
+server.listen(listen, host, () => {
+  console.log(`fault proxy listening on ${host}:${listen}, forwarding to ${target}`);
 });
