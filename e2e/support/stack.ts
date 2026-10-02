@@ -10,6 +10,9 @@ export const TAROT_PROXY = "http://127.0.0.1:4004";
 export const HISTORY_PROXY = "http://127.0.0.1:4005";
 
 export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
+
+// Shared by the storefront under test and by the tests that mint sessions for it.
+export const E2E_AUTH0_SECRET = "e2e0".repeat(16);
 export const AGENT_USER = "e2e-agent-user";
 
 export type Fault =
@@ -41,6 +44,12 @@ export const injectFault = async (proxy: string, fault: Fault): Promise<void> =>
 
 export type ForwardedRequest = { method: string; url: string; headers: Record<string, string> };
 
+/** How many requests the app has sent to a dependency through its proxy so far. */
+export const forwardedCount = async (proxy: string): Promise<number> => {
+  const response = await fetch(`${proxy}/__count`);
+  return ((await response.json()) as { count: number }).count;
+};
+
 /** The last request the app sent to a dependency through its proxy. */
 export const lastForwarded = async (proxy: string): Promise<ForwardedRequest> => {
   const response = await fetch(`${proxy}/__last`);
@@ -64,14 +73,17 @@ export const uniqueClientIp = (): string => {
 };
 
 /** Creates a reading straight in tarot-service-api, bypassing the storefront. */
-export const createReading = async (question: string): Promise<HistoryItem> => {
+export const createReading = async (
+  question: string,
+  userId: string = DEMO_USER_ID,
+): Promise<HistoryItem> => {
   const response = await fetch(`${TAROT_URL}/spreads`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "idempotency-key": `e2e-${randomUUID().replace(/-/g, "")}`,
     },
-    body: JSON.stringify({ userId: DEMO_USER_ID, question }),
+    body: JSON.stringify({ userId, question }),
   });
   if (response.status !== 201) {
     throw new Error(`tarot answered ${response.status} while seeding a reading`);
@@ -79,12 +91,12 @@ export const createReading = async (question: string): Promise<HistoryItem> => {
   return (await response.json()) as HistoryItem;
 };
 
-export const listHistory = async (): Promise<HistoryItem[]> => {
+export const listHistory = async (userId: string = DEMO_USER_ID): Promise<HistoryItem[]> => {
   const items: HistoryItem[] = [];
   let cursor: string | null = null;
   do {
     const query: string = `limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
-    const response = await fetch(`${HISTORY_URL}/users/${DEMO_USER_ID}/spread-history?${query}`);
+    const response = await fetch(`${HISTORY_URL}/users/${userId}/spread-history?${query}`);
     if (!response.ok) {
       throw new Error(`history answered ${response.status}`);
     }
@@ -96,10 +108,14 @@ export const listHistory = async (): Promise<HistoryItem[]> => {
 };
 
 /** The history read model is eventually consistent; wait until it has caught up with tarot. */
-export const waitForHistory = async (spreadIds: string[], timeoutMs = 20_000): Promise<void> => {
+export const waitForHistory = async (
+  spreadIds: string[],
+  userId: string = DEMO_USER_ID,
+  timeoutMs = 20_000,
+): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    const known = new Set((await listHistory()).map((item) => item.spreadId));
+    const known = new Set((await listHistory(userId)).map((item) => item.spreadId));
     if (spreadIds.every((id) => known.has(id))) {
       return;
     }
@@ -128,11 +144,12 @@ export const callMcpTool = async (
   agent: string,
   name: string,
   args: Record<string, unknown>,
+  user: string = AGENT_USER,
 ): Promise<Response> =>
   fetch(`${MCP_URL}/mcp`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${unsignedToken({ sub: AGENT_USER, act: { sub: agent }, scope: "readings:read" })}`,
+      authorization: `Bearer ${unsignedToken({ sub: user, act: { sub: agent }, scope: "readings:read" })}`,
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
     },
