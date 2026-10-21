@@ -1,8 +1,7 @@
 import { decideAsk } from "../../../lib/ask";
-import { auth0 } from "../../../lib/auth0";
 import { beginRequest, describeFailure } from "../../../lib/bff";
 import { allowRequest } from "../../../lib/rate-limit";
-import { resolveSpreadUserId } from "../../../lib/spread-user";
+import { resolveRequestUserId } from "../../../lib/request-user";
 import { createSpread, tarotBaseUrl } from "../../../lib/tarot";
 import { USER_MESSAGES } from "../../../lib/user-messages";
 
@@ -25,13 +24,13 @@ export async function POST(request: Request) {
   const configured = Boolean(tarotBaseUrl());
   // Only read the body once the request has earned it; a flood never reaches the parser.
   const payload = allowed && configured ? await readJson(request) : null;
-  const session = await auth0.getSession().catch(() => null);
+  const userId = await resolveRequestUserId(request);
 
   const decision = decideAsk({
     payload,
     allowed,
     configured,
-    userId: resolveSpreadUserId(session?.user?.sub),
+    userId,
   });
 
   switch (decision.kind) {
