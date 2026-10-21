@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { DEMO_USER_ID } from "./demo-identity";
+import type { Identity } from "./bearer-identity.ts";
+import { DEMO_USER_ID } from "./demo-identity.ts";
 
 const NAMESPACE = "c0a51c00-a1c0-51c0-a1c0-c05a1ca1c0de";
 
@@ -23,6 +24,14 @@ export const resolveSpreadUserId = (sub: string | undefined): string | null => {
     return null;
   }
   return DEMO_USER_ID;
+};
+
+/** A rejected credential never falls through to the development demo user that anonymous gets. */
+export const spreadUserIdFor = (identity: Identity): string | null => {
+  if (identity.kind === "rejected") {
+    return null;
+  }
+  return resolveSpreadUserId(identity.kind === "user" ? identity.sub : undefined);
 };
 
 export const newIdempotencyKey = (): string =>
