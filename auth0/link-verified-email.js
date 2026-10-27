@@ -160,7 +160,9 @@ const handle = async (event, api, { fetchImpl }) => {
   }
 };
 
-exports.onExecutePostLogin = (event, api) => handle(event, api, { fetchImpl: fetch });
+exports.onExecutePostLogin = async (event, api) => {
+  await handle(event, api, { fetchImpl: fetch });
+};
 
 exports.decideLink = decideLink;
 exports.handle = handle;
