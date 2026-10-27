@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --experimental-strip-types \"lib/**/*.test.ts\"",
+    "test": "node --test --experimental-strip-types \"lib/**/*.test.ts\" \"auth0/**/*.test.mjs\"",
     "e2e": "playwright test",
     "e2e:production": "E2E_PRODUCTION=1 playwright test"
   },
