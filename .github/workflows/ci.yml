@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [development, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storefront-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: Cosmic-Arcana/cosmic-arcana-infrastructure/.github/workflows/service-ci.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      service-name: cosmic-arcana-storefront
+      # The storefront takes part in the application's behaviour, and application validation runs
+      # its browser e2e against this image.
+      tier: flow
+      build-image: true
+      dispatch: true
+    secrets:
+      INFRA_DISPATCH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}

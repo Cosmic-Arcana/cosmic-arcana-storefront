@@ -6,21 +6,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test --experimental-strip-types \"lib/**/*.test.ts\" \"auth0/**/*.test.mjs\"",
+    "e2e": "playwright test",
+    "e2e:production": "E2E_PRODUCTION=1 playwright test"
   },
   "dependencies": {
-    "agent-browser": "^0.27.0",
-    "next": "16.3.2",
+    "@auth0/nextjs-auth0": "^4.27.0",
+    "@cosmic-arcana/sdk": "github:Cosmic-Arcana/cosmic-arcana-sdk#semver:^0.1.0",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
+    "jose": "^6.2.12",
+    "next": "16.4.3",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "three": "^0.186.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
+    "agent-browser": "^0.27.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.2",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

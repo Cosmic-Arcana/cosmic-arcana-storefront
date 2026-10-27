@@ -31,14 +31,29 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env.*.local
 
 # vercel
 .vercel
 
-# typescript
+# lighthouse local reports
+lighthouse-*.json
+lighthouse-report.json
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# TypeScript incremental build info
 *.tsbuildinfo
 next-env.d.ts
 
 # lighthouse ci
 /.lighthouseci/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
