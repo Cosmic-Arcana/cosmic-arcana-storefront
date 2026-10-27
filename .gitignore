@@ -47,6 +47,10 @@ lighthouse-report.json
 
 # TypeScript incremental build info
 *.tsbuildinfo
+next-env.d.ts
+
+# lighthouse ci
+/.lighthouseci/
 
 # Playwright
 /test-results/
