@@ -16,6 +16,7 @@
     "@cosmic-arcana/sdk": "github:Cosmic-Arcana/cosmic-arcana-sdk#semver:^0.1.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
+    "jose": "^6.2.12",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",

@@ -1,7 +1,6 @@
-import { auth0 } from "../../../../lib/auth0";
 import { CORRELATION_HEADER, beginRequest, describeFailure } from "../../../../lib/bff";
 import { deleteOutcome, historyBaseUrl, isSpreadId } from "../../../../lib/history";
-import { resolveSpreadUserId } from "../../../../lib/spread-user";
+import { resolveRequestUserId } from "../../../../lib/request-user";
 import { upstreamFetch } from "../../../../lib/upstream";
 import { USER_MESSAGES } from "../../../../lib/user-messages";
 
@@ -19,8 +18,7 @@ export async function DELETE(
     return respond(400, { error: "invalid reading id" }, "invalid");
   }
 
-  const session = await auth0.getSession().catch(() => null);
-  const userId = resolveSpreadUserId(session?.user?.sub);
+  const userId = await resolveRequestUserId(request);
   if (!userId) {
     return respond(401, { error: USER_MESSAGES.signInRequired }, "signed-out");
   }
